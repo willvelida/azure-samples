@@ -64,7 +64,7 @@ jobs:
         name: Deploy Bicep File
         with:
           inlineScript: |
-            az deployment group create --resource-group ${{ secrets.AZURE_RG }} --template-file ./container-apps-ci-cd/deploy/main.bicep --paramters registryName=${{ secrets.REGISTRY_NAME }}
+            az deployment group create --resource-group ${{ secrets.AZURE_RG }} --template-file ./container-apps-ci-cd/deploy/main.bicep --parameters registryName=${{ secrets.REGISTRY_NAME }}
 
       - name: 'Get ACR Credentials'
         id: getacrcreds
