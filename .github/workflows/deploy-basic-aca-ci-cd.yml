@@ -47,7 +47,7 @@ jobs:
         name: Run what-if
         with:
           inlineScript: |
-            az deployment group what-if --resource-group ${{ secrets.AZURE_RG }} --template-file ./container-apps-ci-cd/deploy/main.bicep --parameters registryName=${{ secrets.REGISTRY_NAME }}
+            az deployment group what-if --resource-group ${{ secrets.AZURE_RG }} -f './container-apps-ci-cd/deploy/main.bicep' --parameters registryName=${{ secrets.REGISTRY_NAME }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -64,7 +64,7 @@ jobs:
         name: Deploy Bicep File
         with:
           inlineScript: |
-            az deployment group create --resource-group ${{ secrets.AZURE_RG }} --template-file ./container-apps-ci-cd/deploy/main.bicep --parameters registryName=${{ secrets.REGISTRY_NAME }}
+            az group deployment create --resource-group ${{ secrets.AZURE_RG }} --template-file ./container-apps-ci-cd/deploy/main.bicep --parameters registryName=${{ secrets.REGISTRY_NAME }}
 
       - name: 'Get ACR Credentials'
         id: getacrcreds
