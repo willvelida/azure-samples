@@ -7,6 +7,13 @@ param applicationName string = uniqueString(resourceGroup().id)
 @description('The image that we will deploy to our Container App')
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
+@description('Username for the Azure Container Registry.')
+param acrUsername string
+
+@description('Password for the Azure Container Registry')
+@secure()
+param acrPassword string
+
 var logAnalyticsName = '${applicationName}la'
 var registryName = '${applicationName}cr'
 var containerEnvName = '${applicationName}enc'
@@ -53,6 +60,19 @@ resource dotnetApp 'Microsoft.App/containerApps@2022-01-01-preview' = {
   properties: {
     managedEnvironmentId: containerEnvironment.id
     configuration: {
+      secrets: [
+        {
+          name: 'registrypassword'
+          value: acrPassword
+        }
+      ]
+      registries: [
+        {
+          server: '${containerRegistry.name}.azurecr.io'
+          username: acrUsername
+          passwordSecretRef: 'registrypassword'
+        }
+      ]
       ingress: {
         external: true
         targetPort: 80
