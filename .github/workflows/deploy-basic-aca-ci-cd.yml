@@ -47,7 +47,7 @@ jobs:
         name: Run what-if
         with:
           inlineScript: |
-            az deployment group what-if --resource-group ${{ secrets.AZURE_RG }} --template-file ./container-apps-ci-cd/deploy/main.bicep --paramters registryName=${{ secrets.REGISTRY_NAME }}
+            az deployment group what-if --resource-group ${{ secrets.AZURE_RG }} --template-file ./container-apps-ci-cd/deploy/main.bicep --parameters registryName=${{ secrets.REGISTRY_NAME }}
 
   deploy:
     runs-on: ubuntu-latest
