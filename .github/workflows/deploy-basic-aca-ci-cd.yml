@@ -30,8 +30,8 @@ jobs:
         with:
           deploymentName: ${{ github.run_number }}
           resourceGroupName: ${{ secrets.AZURE_RG }}
-          template: ./deploy/main.bicep
-          parameters: ./deploy/parameters.json
+          template: ./container-apps-ci-cd/deploy/main.bicep
+          parameters: registryName=${{ secrets.REGISTRY_NAME }}
           deploymentMode: Validate
 
   preview:
