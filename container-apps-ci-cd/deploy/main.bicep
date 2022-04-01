@@ -8,7 +8,7 @@ param applicationName string = uniqueString(resourceGroup().id)
 param registryName string
 
 @description('The image that we will deploy to our Container App')
-param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+param containerImage string
 
 var logAnalyticsName = '${applicationName}la'
 var containerEnvName = '${applicationName}enc'
