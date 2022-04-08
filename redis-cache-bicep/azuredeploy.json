@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.4.1318.3566",
+      "templateHash": "2892490494750927815"
+    }
+  },
+  "parameters": {
+    "applicationName": {
+      "type": "string",
+      "defaultValue": "[uniqueString(resourceGroup().id)]",
+      "metadata": {
+        "description": "Name that will be used in the application."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "The location where we will deploy our Redis Cache. Default is location of resource group."
+      }
+    }
+  },
+  "variables": {
+    "cacheName": "[format('{0}rdc', parameters('applicationName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Cache/redis",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('cacheName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "capacity": 0,
+          "family": "C",
+          "name": "Basic"
+        }
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      }
+    }
+  ]
+}
