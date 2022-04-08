@@ -14,7 +14,7 @@ param agentVMSize string = 'Standard_D2s_v3'
 param osDiskSizeGB int = 0
 
 @description('The number of the nodes for the cluster. Default is 1')
-param agentCount int = 1
+param agentCount int = 3
 
 resource aksCluster 'Microsoft.ContainerService/managedClusters@2022-01-02-preview' = {
   name: aksClusterName
