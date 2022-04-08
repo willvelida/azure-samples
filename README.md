@@ -25,3 +25,9 @@ This repository contains all of my Azure samples that I have created for blog po
 | Sample Name | Deploy to Azure | GitHub Link | Blog Post Link |
 | ----------- | --------------- | ----------- | -------------- |
 | Provision Azure Redis Cache with Bicep | | | |
+
+## Azure Virtual Network
+
+| Sample Name | Deploy to Azure | GitHub Link | Blog Post Link |
+| ----------- | --------------- | ----------- | -------------- |
+| Provision Azure Virtual Network with Bicep | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fwillvelida%2Fazure-samples%2Fmain%2Fazure-vnet-bicep-simple%2Fazuredeploy.json) | [Link](https://github.com/willvelida/azure-samples/tree/main/azure-vnet-bicep-simple) | |
