@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.5.6.12127",
+      "templateHash": "7239319903420707183"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "The location where we will deploy our resources to. Default is the location of the resource group"
+      }
+    },
+    "applicationName": {
+      "type": "string",
+      "defaultValue": "[uniqueString(resourceGroup().id)]",
+      "metadata": {
+        "description": "Name of our application."
+      }
+    }
+  },
+  "variables": {
+    "serviceBusName": "[format('sb{0}', parameters('applicationName'))]",
+    "topicName": "messages",
+    "subscriptionName": "messagesub"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ServiceBus/namespaces",
+      "apiVersion": "2021-11-01",
+      "name": "[variables('serviceBusName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      }
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces/topics",
+      "apiVersion": "2021-11-01",
+      "name": "[format('{0}/{1}', variables('serviceBusName'), variables('topicName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ServiceBus/namespaces', variables('serviceBusName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces/topics/subscriptions",
+      "apiVersion": "2021-11-01",
+      "name": "[format('{0}/{1}/{2}', variables('serviceBusName'), variables('topicName'), variables('subscriptionName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ServiceBus/namespaces/topics', variables('serviceBusName'), variables('topicName'))]"
+      ]
+    }
+  ]
+}
