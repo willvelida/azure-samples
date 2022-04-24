@@ -1,0 +1,649 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.5.6.12127",
+      "templateHash": "4378874838021773723"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "The location where we will deploy our resources to. Default is the location of the resource group"
+      }
+    },
+    "applicationName": {
+      "type": "string",
+      "defaultValue": "[uniqueString(resourceGroup().id)]",
+      "metadata": {
+        "description": "Name of our application."
+      }
+    },
+    "storageSku": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "metadata": {
+        "description": "The SKU for the storage account"
+      }
+    }
+  },
+  "variables": {
+    "appServicePlanName": "[format('{0}asp', parameters('applicationName'))]",
+    "appServicePlanSkuName": "Y1",
+    "storageAccountName": "[format('fnstor{0}', replace(parameters('applicationName'), '-', ''))]",
+    "functionAppName": "[format('{0}func', parameters('applicationName'))]",
+    "functionRuntime": "dotnet",
+    "cosmosDbAccountName": "[format('{0}db', parameters('applicationName'))]",
+    "databaseName": "ReadingsDb",
+    "containerName": "Readings",
+    "containerThroughput": 400,
+    "appInsightsName": "[format('{0}ai', parameters('applicationName'))]",
+    "eventHubsName": "[format('{0}eh', parameters('applicationName'))]",
+    "eventHubsSkuName": "Basic",
+    "hubName": "readings"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-08-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('storageSku')]"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "supportsHttpsTrafficOnly": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-03-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp",
+      "properties": {
+        "serverFarmId": "[reference(resourceId('Microsoft.Resources/deployments', 'appServicePlan')).outputs.appServicePlanId.value]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-08-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-08-01').keys[0].value)]"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).InstrumentationKey]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[format('InstrumentationKey={0}', reference(resourceId('Microsoft.Insights/components', variables('appInsightsName'))).InstrumentationKey)]"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "[variables('functionRuntime')]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "DatabaseName",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cosmosDb')).outputs.databaseName.value]"
+            },
+            {
+              "name": "ContainerName",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cosmosDb')).outputs.containerName.value]"
+            },
+            {
+              "name": "CosmosDbEndpoint",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cosmosDb')).outputs.cosmosDbEndpoint.value]"
+            },
+            {
+              "name": "EventHubConnection__fullyQualifiedNamespace",
+              "value": "[format('{0}.servicebus.windows.net', reference(resourceId('Microsoft.Resources/deployments', 'eventHub')).outputs.eventHubNamespaceName.value)]"
+            },
+            {
+              "name": "ReadingsEventHub",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', 'eventHub')).outputs.eventHubName.value]"
+            }
+          ]
+        },
+        "httpsOnly": true
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'appServicePlan')]",
+        "[resourceId('Microsoft.Resources/deployments', 'cosmosDb')]",
+        "[resourceId('Microsoft.Resources/deployments', 'eventHub')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-10-01",
+      "name": "cosmosDb",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "containerName": {
+            "value": "[variables('containerName')]"
+          },
+          "containerThroughput": {
+            "value": "[variables('containerThroughput')]"
+          },
+          "cosmosDbAccountName": {
+            "value": "[variables('cosmosDbAccountName')]"
+          },
+          "databaseName": {
+            "value": "[variables('databaseName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.5.6.12127",
+              "templateHash": "17188826833848306257"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The location that these Cosmos DB resources will be deployed to"
+              }
+            },
+            "cosmosDbAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of our Cosmos DB Account"
+              }
+            },
+            "databaseName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of our Database"
+              }
+            },
+            "containerName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of our container"
+              }
+            },
+            "containerThroughput": {
+              "type": "int",
+              "metadata": {
+                "description": "The amount of throughput to provision in our Cosmos DB Container"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts",
+              "apiVersion": "2021-11-15-preview",
+              "name": "[parameters('cosmosDbAccountName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "databaseAccountOfferType": "Standard",
+                "locations": [
+                  {
+                    "locationName": "[parameters('location')]",
+                    "failoverPriority": 0,
+                    "isZoneRedundant": true
+                  }
+                ],
+                "consistencyPolicy": {
+                  "defaultConsistencyLevel": "Session"
+                }
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              }
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+              "apiVersion": "2021-11-15-preview",
+              "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), parameters('databaseName'))]",
+              "properties": {
+                "resource": {
+                  "id": "[parameters('databaseName')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2021-11-15-preview",
+              "name": "[format('{0}/{1}/{2}', parameters('cosmosDbAccountName'), parameters('databaseName'), parameters('containerName'))]",
+              "properties": {
+                "options": {
+                  "throughput": "[parameters('containerThroughput')]"
+                },
+                "resource": {
+                  "id": "[parameters('containerName')]",
+                  "partitionKey": {
+                    "paths": [
+                      "/id"
+                    ],
+                    "kind": "Hash"
+                  },
+                  "indexingPolicy": {
+                    "indexingMode": "consistent",
+                    "includedPaths": [
+                      {
+                        "path": "/*"
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosDbAccountName'), parameters('databaseName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "cosmosDbAccountName": {
+              "type": "string",
+              "value": "[parameters('cosmosDbAccountName')]"
+            },
+            "databaseName": {
+              "type": "string",
+              "value": "[parameters('databaseName')]"
+            },
+            "containerName": {
+              "type": "string",
+              "value": "[parameters('containerName')]"
+            },
+            "cosmosDbEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))).documentEndpoint]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-10-01",
+      "name": "appServicePlan",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "appServicePlanName": {
+            "value": "[variables('appServicePlanName')]"
+          },
+          "appServicePlanSkuName": {
+            "value": "[variables('appServicePlanSkuName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.5.6.12127",
+              "templateHash": "3476373160927579029"
+            }
+          },
+          "parameters": {
+            "appServicePlanName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of our App Service Plan"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The location to deploy our App Service Plan"
+              }
+            },
+            "appServicePlanSkuName": {
+              "type": "string",
+              "metadata": {
+                "description": "The SKU that we will provision this App Service Plan to."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2021-03-01",
+              "name": "[parameters('appServicePlanName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "[parameters('appServicePlanSkuName')]",
+                "tier": "Dynamic"
+              },
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "appServicePlanId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-10-01",
+      "name": "eventHub",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "eventHubsName": {
+            "value": "[variables('eventHubsName')]"
+          },
+          "eventHubsSkuName": {
+            "value": "[variables('eventHubsSkuName')]"
+          },
+          "hubName": {
+            "value": "[variables('hubName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.5.6.12127",
+              "templateHash": "6223418972809545152"
+            }
+          },
+          "parameters": {
+            "eventHubsName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Event Hubs Namespace"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The location to deploy the Event Hub Namespace to"
+              }
+            },
+            "eventHubsSkuName": {
+              "type": "string",
+              "metadata": {
+                "description": "The SKU that we will provision this Event Hubs Namespace to."
+              }
+            },
+            "hubName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of our event hub that we will provision as part of this namespace"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.EventHub/namespaces",
+              "apiVersion": "2021-11-01",
+              "name": "[parameters('eventHubsName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "[parameters('eventHubsSkuName')]"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              }
+            },
+            {
+              "type": "Microsoft.EventHub/namespaces/eventhubs",
+              "apiVersion": "2021-11-01",
+              "name": "[format('{0}/{1}', parameters('eventHubsName'), parameters('hubName'))]",
+              "properties": {
+                "messageRetentionInDays": 1
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.EventHub/namespaces', parameters('eventHubsName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "eventHubNamespaceName": {
+              "type": "string",
+              "value": "[parameters('eventHubsName')]"
+            },
+            "eventHubNamespaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.EventHub/namespaces', parameters('eventHubsName'))]"
+            },
+            "eventHubName": {
+              "type": "string",
+              "value": "[parameters('hubName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-10-01",
+      "name": "eventhubsroles",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "eventHubNamespaceName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'eventHub')).outputs.eventHubNamespaceName.value]"
+          },
+          "functionAppId": {
+            "value": "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+          },
+          "functionAppPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2021-03-01', 'full').identity.principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.5.6.12127",
+              "templateHash": "2084111212945093898"
+            }
+          },
+          "parameters": {
+            "eventHubNamespaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "The Name of the Event Hubs Namepace"
+              }
+            },
+            "functionAppId": {
+              "type": "string",
+              "metadata": {
+                "description": "The Id of the Function App"
+              }
+            },
+            "functionAppPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The Principal Id of the Function App"
+              }
+            }
+          },
+          "variables": {
+            "eventHubsDataReceiverRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2b629674-e913-4c01-ae53-ef4638d8f975')]",
+            "eventHubsDataSenderRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a638d3c7-ab3a-418d-83e6-5f17a39d4fde')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-10-01-preview",
+              "scope": "[format('Microsoft.EventHub/namespaces/{0}', parameters('eventHubNamespaceName'))]",
+              "name": "[guid(resourceId('Microsoft.EventHub/namespaces', parameters('eventHubNamespaceName')), parameters('functionAppId'), variables('eventHubsDataReceiverRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('functionAppPrincipalId')]",
+                "roleDefinitionId": "[variables('eventHubsDataReceiverRoleId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-10-01-preview",
+              "scope": "[format('Microsoft.EventHub/namespaces/{0}', parameters('eventHubNamespaceName'))]",
+              "name": "[guid(resourceId('Microsoft.EventHub/namespaces', parameters('eventHubNamespaceName')), parameters('functionAppId'), variables('eventHubsDataSenderRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('functionAppPrincipalId')]",
+                "roleDefinitionId": "[variables('eventHubsDataSenderRoleId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'eventHub')]",
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-10-01",
+      "name": "sqlRoleAssignment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "cosmosDbAccountName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cosmosDb')).outputs.cosmosDbAccountName.value]"
+          },
+          "functionAppPrincipalId": {
+            "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2021-03-01', 'full').identity.principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.5.6.12127",
+              "templateHash": "16291328672740302741"
+            }
+          },
+          "parameters": {
+            "cosmosDbAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "The name of the Cosmos DB account that we will use for SQL Role Assignments"
+              }
+            },
+            "functionAppPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The Principal Id of the Function App that we will grant the role assignment to."
+              }
+            }
+          },
+          "variables": {
+            "roleDefinitionId": "[guid('sql-role-definition-', parameters('functionAppPrincipalId'), resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')))]",
+            "roleAssignmentId": "[guid(variables('roleDefinitionId'), parameters('functionAppPrincipalId'), resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')))]",
+            "roleDefinitionName": "Function Read Write Role",
+            "dataActions": [
+              "Microsoft.DocumentDB/databaseAccounts/readMetadata",
+              "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*"
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions",
+              "apiVersion": "2021-11-15-preview",
+              "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), variables('roleDefinitionId'))]",
+              "properties": {
+                "roleName": "[variables('roleDefinitionName')]",
+                "type": "CustomRole",
+                "assignableScopes": [
+                  "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
+                ],
+                "permissions": [
+                  {
+                    "dataActions": "[variables('dataActions')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+              "apiVersion": "2021-11-15-preview",
+              "name": "[format('{0}/{1}', parameters('cosmosDbAccountName'), variables('roleAssignmentId'))]",
+              "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', split(format('{0}/{1}', parameters('cosmosDbAccountName'), variables('roleDefinitionId')), '/')[0], split(format('{0}/{1}', parameters('cosmosDbAccountName'), variables('roleDefinitionId')), '/')[1])]",
+                "principalId": "[parameters('functionAppPrincipalId')]",
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', split(format('{0}/{1}', parameters('cosmosDbAccountName'), variables('roleDefinitionId')), '/')[0], split(format('{0}/{1}', parameters('cosmosDbAccountName'), variables('roleDefinitionId')), '/')[1])]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'cosmosDb')]",
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+    }
+  ]
+}
