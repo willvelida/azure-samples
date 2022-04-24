@@ -10,12 +10,11 @@ param appServicePlanSkuName string
 resource appServicePlan 'Microsoft.Web/serverfarms@2021-03-01' = {
   name: appServicePlanName
   location: location
-  kind: 'linux'
   sku: {
     name: appServicePlanSkuName
+    tier: 'Dynamic'
   }
   properties: {
-    reserved: true
   } 
 }
 

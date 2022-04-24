@@ -123,6 +123,10 @@ resource functionApp 'Microsoft.Web/sites@2021-03-01' = {
           name: 'EventHubConnection__fullyQualifiedNamespace'
           value: '${eventHub.outputs.eventHubNamespaceName}.servicebus.windows.net'
         }
+        {
+          name: 'ReadingsEventHub'
+          value: eventHub.outputs.eventHubName
+        }
       ]
     }
     httpsOnly: true
