@@ -1,7 +1,7 @@
 @description('The location where we will deploy our resources to. Default is the location of the resource group')
 param location string = resourceGroup().location
 
-@description('Namoe of our application.')
+@description('Name of our application.')
 param applicationName string = uniqueString(resourceGroup().id)
 
 var serviceBusName = '${applicationName}sb'
