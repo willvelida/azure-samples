@@ -1,6 +1,3 @@
-using System;
-using System.Text;
-using System.Threading.Tasks;
 using Azure.Messaging.EventHubs;
 using DeviceReaderSample.Models;
 using Microsoft.Azure.Cosmos;
@@ -8,6 +5,9 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace DeviceReaderSample.Functions
 {

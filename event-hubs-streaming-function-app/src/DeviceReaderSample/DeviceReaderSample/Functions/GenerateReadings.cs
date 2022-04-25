@@ -1,18 +1,13 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
+using Bogus;
+using DeviceReaderSample.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Azure.Messaging.EventHubs.Producer;
-using Bogus;
-using DeviceReaderSample.Models;
+using System;
 using System.Collections.Generic;
-using Azure.Messaging.EventHubs;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace DeviceReaderSample.Functions
 {

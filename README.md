@@ -14,6 +14,12 @@ This repository contains all of my Azure samples that I have created for blog po
 | ----------- | --------------- | ----------- | -------------- |
 | Using Managed Identities to authenticate with Azure Cosmos DB | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fwillvelida%2Fazure-samples%2Fmain%2Fcosmosdb-function-managed-identity%2Fdeploy%2Fazuredeploy.json) | [Link](https://github.com/willvelida/azure-samples/tree/main/cosmosdb-function-managed-identity) | [Blog](https://www.willvelida.com/posts/authenticating-cosmos-db-with-managed-identity/) |
 
+## Azure Functions
+
+| Sample Name | Deploy to Azure | GitHub Link | Blog Post Link |
+| ----------- | --------------- | ----------- | -------------- |
+| Building an event streaming app with Azure Functions, Event Hubs and Azure Cosmos DB | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fwillvelida%2Fazure-samples%2Fmain%2Fevent-hubs-streaming-function-app%2Fdeploy%2Fazuredeploy.json) | [Link](https://github.com/willvelida/azure-samples/tree/main/event-hubs-streaming-function-app) | [Blog](https://www.willvelida.com/posts/building-streaming-app-event-hubs-functions-cosmos/) |
+
 ## Azure Kubernetes Service
 
 | Sample Name | Deploy to Azure | GitHub Link | Blog Post Link |
