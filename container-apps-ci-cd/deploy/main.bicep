@@ -91,4 +91,7 @@ resource dotnetApp 'Microsoft.App/containerApps@2022-01-01-preview' = {
       }
     }
   }
+  identity: {
+    type: 'SystemAssigned'
+  }
 }
