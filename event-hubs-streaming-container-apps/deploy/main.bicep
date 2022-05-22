@@ -18,7 +18,7 @@ var eventHubsName = '${applicationName}eh'
 var eventHubsSkuName = 'Standard'
 var consumerGroupName = 'receiverconsumergroup'
 var hubName = 'readings'
-var storageAccountName = 'fnstor${replace(applicationName, '-', '')}'
+var storageAccountName = 'stor${replace(applicationName, '-', '')}'
 var storageContainerName = 'checkpoints'
 var storageSkuName = 'Standard_LRS'
 
@@ -69,6 +69,15 @@ module storageAccount 'modules/azureStorage.bicep' = {
     storageAccountName: storageAccountName 
     storageAccountSku: storageSkuName
     storageContainerName: storageContainerName
+  }
+}
+
+module storageAccountContributorRole 'modules/storageAccountContributorRole.bicep' = {
+  name: 'contributorrole'
+  params: {
+    containerAppId: receiverApp.id
+    containerAppPrincipalId: receiverApp.identity.principalId
+    storageAccountName: storageAccount.outputs.storageAccountName
   }
 }
 
@@ -221,6 +230,10 @@ resource receiverApp 'Microsoft.App/containerApps@2022-03-01' = {
         {
           name: 'consumergroupname'
           value: eventHub.outputs.consumerGroupName
+        }
+        {
+          name: 'blobendpointuri'
+          value: 'https://${storageAccount.outputs.storageAccountName}.blob.core.windows.net/${storageAccount.outputs.blobContainerName}'
         }
       ]
       registries: [
