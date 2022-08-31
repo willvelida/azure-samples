@@ -7,7 +7,9 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddHttpClient("Products", (httpClient) => httpClient.BaseAddress = new Uri(builder.Configuration.GetValue<string>("ProductsApi")));
-builder.Services.AddHttpClient("Inventory", (httpClient) => httpClient.BaseAddress = new Uri(builder.Configuration.GetValue<string>("Inventory")));
+builder.Services.AddHttpClient("Inventory", (httpClient) => httpClient.BaseAddress = new Uri(builder.Configuration.GetValue<string>("InventoryApi")));
+builder.Services.AddScoped<IStoreBackendClient, StoreBackendClient>();
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 

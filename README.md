@@ -2,6 +2,12 @@
 
 This repository contains all of my Azure samples that I have created for blog posts, conferences, customers and my own learning.
 
+## APIM
+
+| Sample Name | Deploy to Azure | GitHub Link | Blog Post Link |
+| ----------- | --------------- | ----------- | -------------- |
+| Expose Azure Container Instance to API Management | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fwillvelida%2Fazure-samples%2Fmain%2Fcosmosdb-function-managed-identity%2Fdeploy%2Fazuredeploy.json) | [Link]() | |
+
 ## Azure Container Apps
 
 | Sample Name | Deploy to Azure | GitHub Link | Blog Post Link |

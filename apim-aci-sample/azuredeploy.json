@@ -1,0 +1,179 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.9.1.41621",
+      "templateHash": "12174630304828561859"
+    }
+  },
+  "parameters": {
+    "applicationName": {
+      "type": "string",
+      "defaultValue": "[uniqueString(resourceGroup().id)]",
+      "metadata": {
+        "description": "Name of the application."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location of the APIM instance"
+      }
+    },
+    "apimInstanceName": {
+      "type": "string",
+      "defaultValue": "[format('apim{0}', parameters('applicationName'))]",
+      "metadata": {
+        "description": "Name of the APIM instance"
+      }
+    },
+    "publisherEmail": {
+      "type": "string",
+      "metadata": {
+        "description": "Email of the APIM publisher"
+      }
+    },
+    "publisherName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the publisher for APIM"
+      }
+    },
+    "aciGroupName": {
+      "type": "string",
+      "defaultValue": "[format('aci{0}', parameters('applicationName'))]",
+      "metadata": {
+        "description": "Name for the container group"
+      }
+    },
+    "image": {
+      "type": "string",
+      "defaultValue": "willvelida/simpleweatherapi",
+      "metadata": {
+        "description": "Container image to deploy. Should be of the form repoName/imagename:tag for images stored in public Docker Hub, or a fully qualified URI for other registries. Images from private registries require additional registry credentials."
+      }
+    },
+    "port": {
+      "type": "int",
+      "defaultValue": 80,
+      "metadata": {
+        "description": "Port to open on the container and the public IP address."
+      }
+    },
+    "cpuCores": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "The number of CPU cores to allocate to the container."
+      }
+    },
+    "memoryInGb": {
+      "type": "int",
+      "defaultValue": 2,
+      "metadata": {
+        "description": "The amount of memory to allocate to the container in gigabytes."
+      }
+    },
+    "restartPolicy": {
+      "type": "string",
+      "defaultValue": "Always",
+      "allowedValues": [
+        "Always",
+        "Never",
+        "OnFailure"
+      ],
+      "metadata": {
+        "description": "The behavior of Azure runtime if container has stopped."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2021-09-01",
+      "name": "[parameters('aciGroupName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "containers": [
+          {
+            "name": "[parameters('aciGroupName')]",
+            "properties": {
+              "image": "[parameters('image')]",
+              "ports": [
+                {
+                  "port": "[parameters('port')]",
+                  "protocol": "TCP"
+                }
+              ],
+              "resources": {
+                "requests": {
+                  "cpu": "[parameters('cpuCores')]",
+                  "memoryInGB": "[parameters('memoryInGb')]"
+                }
+              }
+            }
+          }
+        ],
+        "osType": "Linux",
+        "restartPolicy": "[parameters('restartPolicy')]",
+        "ipAddress": {
+          "dnsNameLabel": "[parameters('aciGroupName')]",
+          "type": "Public",
+          "ports": [
+            {
+              "port": "[parameters('port')]",
+              "protocol": "TCP"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.ApiManagement/service",
+      "apiVersion": "2021-08-01",
+      "name": "[parameters('apimInstanceName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "capacity": 1,
+        "name": "Developer"
+      },
+      "properties": {
+        "publisherEmail": "[parameters('publisherEmail')]",
+        "publisherName": "[parameters('publisherName')]"
+      }
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/apis",
+      "apiVersion": "2021-12-01-preview",
+      "name": "[format('{0}/{1}', parameters('apimInstanceName'), 'WeatherAPI')]",
+      "properties": {
+        "displayName": "Weather API",
+        "path": "Weather",
+        "serviceUrl": "[format('http://{0}', reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('aciGroupName'))).ipAddress.fqdn)]",
+        "protocols": [
+          "HTTPS"
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', parameters('apimInstanceName'))]",
+        "[resourceId('Microsoft.ContainerInstance/containerGroups', parameters('aciGroupName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/apis/operations",
+      "apiVersion": "2021-12-01-preview",
+      "name": "[format('{0}/{1}/{2}', parameters('apimInstanceName'), 'WeatherAPI', 'GetWeather')]",
+      "properties": {
+        "displayName": "GET weather",
+        "method": "GET",
+        "urlTemplate": "/WeatherForecast"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service/apis', parameters('apimInstanceName'), 'WeatherAPI')]"
+      ]
+    }
+  ]
+}
